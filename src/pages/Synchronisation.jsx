@@ -3,7 +3,6 @@ import axios from 'axios';
 import React, {useEffect, useState} from 'react'
 import { Badge } from "@/src/components/ui/badge"
 import { ArrowUpDown } from "lucide-react"
-import {useFormStatus} from 'react-dom'
 import {
   flexRender,
   getCoreRowModel,
@@ -23,7 +22,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/src/components/ui/table"
-import { setDate } from "date-fns";
 
 const Synchronisation = () => {
   const url = `http://localhost/wordpress/wp-json/hqfastservice/v1/products`;

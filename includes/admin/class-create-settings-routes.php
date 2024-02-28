@@ -9,22 +9,40 @@ class WP_React_Settings_Rest_Route {
     }
 
     public function create_rest_routes() {
+        /**
+         * feat: gestion des routes personnalisé pour les produits
+         */
         register_rest_route('hqfastservice/v1', '/products/', array(
             'methods' => 'GET',
             'callback' => [$this, 'get_products'],
-            'permission_callback' => [ $this, 'get_products_permission' ]
+            'permission_callback' => [ $this, 'get_data_permission' ]
         ));
 
         register_rest_route('hqfastservice/v1', '/change-status-product/', array(
             'methods' => 'POST',
             'callback' => [$this, 'change_status_product'],
-            'permission_callback' => [ $this, 'get_products_permission' ]
+            'permission_callback' => [ $this, 'get_data_permission' ]
         ));
 
         register_rest_route('hqfastservice/v1', '/create-products/', array(
             'methods' => 'POST',
             'callback' => [$this, 'create_products'],
-            'permission_callback' => [ $this, 'get_products_permission' ]
+            'permission_callback' => [ $this, 'get_data_permission' ]
+        ));
+
+        /**
+         * feat: gestion des routes personnalisé pour les commandes
+         * todo: configuration de get_data_permission 
+         */
+        register_rest_route('hqfastservice/v1', '/commande/', array(
+            'methods' => 'GET',
+            'callback' => [$this, 'get_commandes'],
+            'permission_callback' => [ $this, 'get_data_permission' ]
+        ));
+        register_rest_route('hqfastservice/v1', '/change-status-commande/', array(
+            'methods' => 'POST',
+            'callback' => [$this, 'change_status_commande'],
+            'permission_callback' => [ $this, 'get_data_permission' ]
         ));
     }
 
@@ -121,12 +139,47 @@ class WP_React_Settings_Rest_Route {
     }
 
 
-    public function get_products_permission() {
+    public function get_data_permission() {
         return true;
     }
 
     public function save_settings_permission() {
         return current_user_can( 'publish_posts' );
+    }
+
+    public function get_commandes() {
+        $args           = array(
+			'post_type'      => 'commande',
+			'posts_per_page' => -1,
+            'post_status' => 'draft'
+		);
+        $posts = get_posts( $args );
+        foreach ($posts as $key => $post) {
+            $productIds = get_field('produits',$post->ID);
+            $args           = array(
+                'post_type'      => 'products',
+                'posts_per_page' => 4,
+                'post__in' => $productIds
+            );
+            $posts[$key]->products = get_posts( $args );
+        }
+        return rest_ensure_response( $posts );
+    }
+
+    public function change_status_commande($data) {
+        $idCommande = $data['idCommande'];
+        $args           = array(
+			'ID'      => $idCommande,
+            'post_status' => 'publish',
+            'post_type' => 'commande'
+		);
+        if (wp_update_post($args)) {
+            http_response_code(200); // OK
+            return 'Product status changed successfully.';
+        } else {
+            http_response_code(500); // Internal Server Error
+            return 'Failed to change product status.';
+        }
     }
 }
 new WP_React_Settings_Rest_Route();

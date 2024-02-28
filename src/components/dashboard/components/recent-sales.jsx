@@ -1,4 +1,6 @@
-import React from "react";
+import React, { useState , useEffect} from "react";
+import axios from 'axios';
+
 import {
   Avatar,
   AvatarFallback,
@@ -6,6 +8,14 @@ import {
 } from "@/src/components/ui/avatar";
 
 export function RecentSales() {
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true)
+  useEffect(() => {
+    const response = axios.get("http://localhost/wordpress/wp-json/wp/v2/users");
+    setUsers(response.data);
+    setLoading(false);
+    console.log(response)
+  }, [])
   return (
     <div className="space-y-8">
       <div className="flex items-center">
