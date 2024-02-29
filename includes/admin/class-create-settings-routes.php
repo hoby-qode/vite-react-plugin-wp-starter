@@ -158,10 +158,15 @@ class WP_React_Settings_Rest_Route {
             $productIds = get_field('produits',$post->ID);
             $args           = array(
                 'post_type'      => 'products',
-                'posts_per_page' => 4,
                 'post__in' => $productIds
             );
-            $posts[$key]->products = get_posts( $args );
+            $products = get_posts( $args );
+            foreach ($products as $key => $product) {
+                $products[$key]->cover = get_the_post_thumbnail_url( $product->ID);
+                $term = wp_get_post_terms($product->ID, "category_product");
+                $products[$key]->price = get_field("prix", "category_product_".$term[0]->term_id);
+            }
+            $posts[$key]->products = $products;
         }
         return rest_ensure_response( $posts );
     }
