@@ -1,50 +1,38 @@
+/* eslint-disable react/prop-types */
 import { Button } from "@/src/components/ui/button"
 import axios from 'axios';
-import React, {useEffect, useState} from 'react'
-import { Badge } from "@/src/components/ui/badge"
-import { ArrowUpDown } from "lucide-react"
-import {useFormStatus} from 'react-dom'
-import {
-  flexRender,
-  getCoreRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
-} from "@tanstack/react-table"
- 
+import {useEffect,  useState} from 'react'
+import { ArrowUpDown, PlusCircleIcon } from "lucide-react"
+import {flexRender,getCoreRowModel,getFilteredRowModel,getPaginationRowModel,getSortedRowModel,useReactTable} from "@tanstack/react-table"
 import { clsx } from 'clsx';
 import { buttonVariants } from '@/src/components/ui/button';
-
+import {Popover,PopoverContent, PopoverTrigger} from "@/src/components/ui/popover";
+import {Table,TableBody,TableCell,TableHead, TableHeader,TableRow} from "@/src/components/ui/table"
+import { Input } from "../components/ui/input";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/src/components/ui/table"
-import { cp } from "fs";
-
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  SelectLabel,
+  SelectGroup
+} from "@/src/components/ui/select"
 const Commande = () => {
   const url = `http://localhost/wordpress/wp-json/hqfastservice/v1/commande`;
   const [data, setData] = useState({})
-  const [loading, setLoading] = useState(true)
-  
 //   const api_key= '7343bda15bf80656112f431edb1bcc76';
-
   const fetchData = async () => {
     try {
       const response = await axios.get(url);
-      console.log(response)
       setData(response.data);
-      setLoading(false);
     } catch (error) {
       console.error(error);
-      setLoading(false);
     }
   };
   useEffect(() => {
-    fetchData();
+    fetchData(); 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return (
     <div>
@@ -56,7 +44,7 @@ const Commande = () => {
 const columns = [
   {
     accessorKey: "post_title",
-    header: "Commande",
+    header: "Nom du client",
   },
   {
     accessorKey: "products",
@@ -80,26 +68,51 @@ const columns = [
     accessorKey: "",
     header: "Actions",
   },
+  {
+    accessorKey: "post_status",
+    header: "Etat de commande",
+  },
 ]
 
-
+// eslint-disable-next-line react/prop-types
 const Products = ({products}) => {
+  const [isShowMore, setIsShowMore] = useState(false);
   return (
     <div>
-      {products.map((product, key) => (
-        <>
-          <span dangerouslySetInnerHTML={{__html: product.post_title}} />, &nbsp;
-        </>
-      ))}
+      {
+        products ?
+          isShowMore ?  
+            products.map((product, key) => 
+              <div key={key}>
+                <strong dangerouslySetInnerHTML={{__html: product.post_title}} /> 
+              </div>
+            )
+          : products.length < 2 ? 
+          products.map((product, key) => 
+              <div key={key}>
+                <strong dangerouslySetInnerHTML={{__html: product.post_title}} /> 
+              </div>
+            )
+          : products.slice(0,3).map((product, key) => 
+            <div key={key}>
+              <strong dangerouslySetInnerHTML={{__html: product.post_title}} /> 
+            </div>
+          )
+        : ''
+      }
+      {products && products.length > 3 ? <PlusCircleIcon onClick={() => setIsShowMore(!isShowMore)} style={{float: 'right'}}/> : ''}
     </div>
   )
 }
+
+
 function DataTable({
   columns,
   data,
   onChangeData
 }) {
-  const [sorting, setSorting] = React.useState([])
+  const [sorting, setSorting] = useState([])
+  const [columnFilters, setColumnFilters] = useState([])
   const table = useReactTable({
     data,
     columns,
@@ -107,8 +120,11 @@ function DataTable({
     getPaginationRowModel: getPaginationRowModel(),
     onSortingChange: setSorting,
     getSortedRowModel: getSortedRowModel(),
+    onColumnFiltersChange: setColumnFilters,
+    getFilteredRowModel: getFilteredRowModel(),
     state: {
       sorting,
+      columnFilters
     },
   })
   
@@ -125,7 +141,45 @@ function DataTable({
       }
     }
   }
+  const DetailModal = ({data}) => {
+    return (
+      <>
+        <button data-modal-target="default-modal" data-modal-toggle="default-modal" className="block text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800" type="button">
+          Toggle modal
+        </button>
 
+        <div id="default-modal" tabIndex="-1" aria-hidden="true" className="hidden overflow-y-auto overflow-x-hidden fixed top-0 right-0 left-0 z-50 justify-center items-center w-full md:inset-0 h-[calc(100%-1rem)] max-h-full">
+            <div className="relative p-4 w-full max-w-2xl max-h-full">
+                <div className="relative bg-white rounded-lg shadow dark:bg-gray-700">
+                    <div className="flex items-center justify-between p-4 md:p-5 border-b rounded-t dark:border-gray-600">
+                        <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                            Terms of Service
+                        </h3>
+                        <button type="button" className="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 ms-auto inline-flex justify-center items-center dark:hover:bg-gray-600 dark:hover:text-white" data-modal-hide="default-modal">
+                            <svg className="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
+                                <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/>
+                            </svg>
+                            <span className="sr-only">Close modal</span>
+                        </button>
+                    </div>
+                    <div className="p-4 md:p-5 space-y-4">
+                        <p className="text-base leading-relaxed text-gray-500 dark:text-gray-400">
+                            With less than a month to go before the European Union enacts new consumer privacy laws for its citizens, companies around the world are updating their terms of service agreements to comply.
+                        </p>
+                        <p className="text-base leading-relaxed text-gray-500 dark:text-gray-400">
+                            The European Union&apos;s General Data Protection Regulation (G.D.P.R.) goes into effect on May 25 and is meant to ensure a common set of data rights in the European Union. It requires organizations to notify users as soon as possible of high-risk data breaches that could personally affect them.
+                        </p>
+                    </div>
+                    <div className="flex items-center p-4 md:p-5 border-t border-gray-200 rounded-b dark:border-gray-600">
+                        <button data-modal-hide="default-modal" type="button" className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">I accept</button>
+                        <button data-modal-hide="default-modal" type="button" className="py-2.5 px-5 ms-3 text-sm font-medium text-gray-900 focus:outline-none bg-white rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-4 focus:ring-gray-100 dark:focus:ring-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700">Decline</button>
+                    </div>
+                </div>
+            </div>
+        </div>    
+      </>
+    )
+  }
   const showDetail = async (id) => {
     try {
       const res = await axios.post(`http://localhost/wordpress/wp-json/wp/v2/commande`, {idCommande : id});
@@ -137,8 +191,34 @@ function DataTable({
       console.error(error);
     }
   }
+  useEffect(() => {
+    table.getColumn('post_status')?.setFilterValue("draft")
+  },[])
   return (
     <div >
+      <div className="flex items-center py-4 space-x-2">
+        <Input className="max-w-sm" placeholder="Nom du client" value={(table.getColumn("post_title")?.getFilterValue()) ?? ''} onChange={(event) => table.getColumn('post_title')?.setFilterValue(event.target.value)}/>
+        <div className="w-[200px]">
+          <Select onValueChange={(value) => table.getColumn('post_status')?.setFilterValue(value)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Etat de commande" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectLabel>
+                  <span className="font-medium">Etat de commande</span>
+                </SelectLabel>
+                <SelectItem value="draft">
+                  <span className="font-medium">En attente</span>
+                </SelectItem>
+                <SelectItem value="publish">
+                  <span className="font-medium">Valider</span>
+                </SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
       <div className="rounded-md border">
         <Table>
           <TableHeader>
@@ -150,16 +230,17 @@ function DataTable({
                     <span className="screen-reader-text">Select All</span>
                   </label>
                 </TableHead>
-                {headerGroup.headers.map((header) => {
+                {headerGroup.headers.map((header, key) => {
                   return (
-                    <TableHead key={header.id}>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
-                    </TableHead>
+                      key == 4 ? '' : 
+                      <TableHead key={header.id}>
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
+                  </TableHead>
                   )
                 })}
               </TableRow>
@@ -185,16 +266,32 @@ function DataTable({
                     </div>
                   </TableCell>
                   {row.getVisibleCells().map((cell, key) => (
+                    key == 4 ? '' : 
                     <TableCell key={cell.id}>
                       {key == 1 ? 
                       <Products products={cell.row.original.products} /> : 
-                      key == 3 ? <div className="flex gap-4"><Button onClick={() => showDetail(cell.row.original.ID)} className={clsx(buttonVariants({variant: 'secondary'}))}>
-                      Voir</Button><Button onClick={() => handleStatus(cell.row.original.ID)} className={clsx(buttonVariants({variant: 'destructive'}))}>
-                      Valider</Button></div> : 
+                      key == 3 ? 
+                      <div className="flex gap-4">
+                        <Button 
+                          onClick={() => handleStatus(cell.row.original.ID)} 
+                          className={clsx(buttonVariants({variant: 'outline'}))} 
+                          disabled={cell.row.original.post_status == 'publish'}>
+                          Voir +
+                        </Button>
+                        <button data-modal-target="default-modal" data-modal-toggle="default-modal" className="block text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800" type="button">
+                          Toggle modal
+                        </button>
+                        <Button onClick={() => handleStatus(cell.row.original.ID)} className={clsx(buttonVariants({variant: 'destructive'}))} disabled={cell.row.original.post_status == 'publish'}>
+                          Valider
+                        </Button>
+                      </div> : 
+                      key == 4 ? 
+                      <div>
+                        {cell.row.original.post_status}
+                      </div> :
                       flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
+                    </TableCell> 
                   ))}
-
                 </TableRow>
               ))
             ) : (
@@ -225,70 +322,9 @@ function DataTable({
           Suivant
         </Button>
       </div>
+      <DetailModal />
     </div>
   )
 }
-const ButtonSynchro = ({prevData, setData}) => {
-  const [pending, setPending] = useState(false);
 
-  const lanceSynchro = (e) => {
-    e.preventDefault();
-    setPending(true);
-
-    const options = {
-      method: 'GET',
-      headers: {
-        accept: 'application/json',
-        Authorization: 'Bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI3MzQzYmRhMTViZjgwNjU2MTEyZjQzMWVkYjFiY2M3NiIsInN1YiI6IjY1YTRmM2Q3OGEwZTliMDEyZWI0NjE3NiIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.ZJc_GUl1LWfmJovPq51s3MiFuwsKAaQeGH6YXQSRjUI'
-      }
-    };
-    
-    fetch('https://api.themoviedb.org/3/movie/now_playing?language=fr-FR&page=1', options)
-      .then(response => {
-        if (!response.ok) {
-          throw new Error('La requête fetch a échoué');
-        }
-        return response.json();
-      })
-      .then(response => {
-        const apiUrl = `http://localhost/wordpress/wp-json/hqfastservice/v1/create-products`;
-        fetch(apiUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            data: response.results
-          })
-        })
-        .then(response => {
-          if (!response.ok) {
-            throw new Error('La réponse du réseau n\'était pas ok');
-          }
-          return response.json();
-        })
-        .then(data => {
-          console.log("data", data)
-          console.log("response", response)
-          setData(data.data)
-        })
-        .catch(error => {
-          console.error('Erreur lors de l\'envoi des données:', error);
-        })
-        .finally(() => {
-          setPending(false);
-        });
-      })
-      .catch(err => {
-        console.error(err);
-        setPending(false);
-      });
-  }
-
-  return (
-    <Button onClick={(e) => lanceSynchro(e)} disabled={pending}>
-      {pending ? 'Chargement...' : 'Lancer la synchronisation'}
-    </Button>
-  );
-}
 export default Commande

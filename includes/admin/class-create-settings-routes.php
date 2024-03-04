@@ -63,9 +63,6 @@ class WP_React_Settings_Rest_Route {
     }
 
     public function create_products($data) {
-        ini_set('memory_limit', '256M');
-        // $newData = json_decode($data, true); // Convertir les données JSON en tableau PHP
-
         // // Vérifier si des données ont été reçues
         if (empty($data['data'])) {
             return 'Aucune donnée à traiter.';
@@ -105,7 +102,6 @@ class WP_React_Settings_Rest_Route {
                     if (!\is_wp_error($attachmentId)) {
                         set_post_thumbnail($post_id, $attachmentId);
                     }
-
                 }
 
                 $vote_average = $product['vote_average'];
@@ -134,8 +130,19 @@ class WP_React_Settings_Rest_Route {
             'post_status' => 'draft'
 		);
         $requests_query = new WP_Query( $args );
-
-        return rest_ensure_response( $requests_query->posts );
+        $res = $requests_query->posts;
+        $products = [];
+        foreach ($res as $key => $item) {
+            $products[$key]['id'] = $item->ID;
+            $products[$key]['post_title'] = $item->post_title;
+            $products[$key]['slug'] = $item->post_name;
+            $products[$key]['post_content'] = $item->post_content;
+            $products[$key]['post_date'] = $item->post_date;
+            $products[$key]['cover'] = get_the_post_thumbnail_url($item->ID);
+            $products[$key]['tags'] = wp_get_post_terms($item->ID, "hq_tags");
+            $products[$key]['categories'] = wp_get_post_terms($item->ID, "category_product");
+        }
+        return rest_ensure_response( $products );
     }
 
 
@@ -151,7 +158,9 @@ class WP_React_Settings_Rest_Route {
         $args           = array(
 			'post_type'      => 'commande',
 			'posts_per_page' => -1,
-            'post_status' => 'draft'
+            'post_status' => 'draft, publish',
+            'order' => 'DESC',
+            'orderBy' => 'date'
 		);
         $posts = get_posts( $args );
         foreach ($posts as $key => $post) {
@@ -160,11 +169,21 @@ class WP_React_Settings_Rest_Route {
                 'post_type'      => 'products',
                 'post__in' => $productIds
             );
-            $products = get_posts( $args );
-            foreach ($products as $key => $product) {
-                $products[$key]->cover = get_the_post_thumbnail_url( $product->ID);
-                $term = wp_get_post_terms($product->ID, "category_product");
-                $products[$key]->price = get_field("prix", "category_product_".$term[0]->term_id);
+            $res = get_posts( $args );
+            // foreach ($products as $key => $product) {
+            //     $products[$key]->cover = get_the_post_thumbnail_url( $product->ID);
+            //     // $term = wp_get_post_terms($product->ID, "category_product");
+            //     // $products[$key]->price = get_field("prix", "category_product_".$term[0]->term_id);
+            // }
+            $products = [];
+            foreach ($res as $key => $item) {
+                $products[$key]['id'] = $item->ID;
+                $products[$key]['post_title'] = $item->post_title;
+                // $categories = wp_get_post_terms($item->ID, "category_product");
+                // $category = count($categories) > 0 ? $categories[0] : null; 
+                // //todo ajout reduction
+                // $products[$key]['prix'] = get_field("prix", "category_product_".$category->term_id);
+                $products[$key]['categories'] = wp_get_post_terms($item->ID, "category_product");
             }
             $posts[$key]->products = $products;
         }

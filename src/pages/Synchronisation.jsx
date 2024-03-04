@@ -1,47 +1,31 @@
+/* eslint-disable react/prop-types */
 import { Button } from "@/src/components/ui/button"
 import axios from 'axios';
 import React, {useEffect, useState} from 'react'
 import { Badge } from "@/src/components/ui/badge"
 import { ArrowUpDown } from "lucide-react"
-import {
-  flexRender,
-  getCoreRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
-} from "@tanstack/react-table"
- 
+import { flexRender, getCoreRowModel, getPaginationRowModel,getSortedRowModel,useReactTable} from "@tanstack/react-table"
 import { clsx } from 'clsx';
 import { buttonVariants } from '@/src/components/ui/button';
-
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/src/components/ui/table"
+import ButtonSynchro from './../components/ButtonSynchro';
+import { Table, TableBody,TableCell,TableHead,TableHeader,TableRow} from "@/src/components/ui/table"
 
 const Synchronisation = () => {
   const url = `http://localhost/wordpress/wp-json/hqfastservice/v1/products`;
   const [data, setData] = useState({})
-  const [loading, setLoading] = useState(true)
   
 //   const api_key= '7343bda15bf80656112f431edb1bcc76';
-
   const fetchData = async () => {
     try {
       const response = await axios.get(url);
       setData(response.data);
-      setLoading(false);
     } catch (error) {
       console.error(error);
-      setLoading(false);
     }
   };
   useEffect(() => {
     fetchData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return (
     <div>
@@ -51,6 +35,10 @@ const Synchronisation = () => {
 }
 
 const columns = [
+  {
+    accessorKey: "cover",
+    header: "Cover",
+  },
   {
     accessorKey: "post_title",
     header: "Titre",
@@ -74,8 +62,12 @@ const columns = [
     },
   },
   {
-    accessorKey: "post_status",
-    header: "Tag",
+    accessorKey: "category",
+    header: "Catégorie",
+  },
+  {
+    accessorKey: "tag",
+    header: "Genres",
   },
   {
     accessorKey: "post_author",
@@ -110,7 +102,7 @@ function DataTable({
     try {
       const res = await axios.post(`http://localhost/wordpress/wp-json/hqfastservice/v1/change-status-product`, {productId : id});
       if(res.status <= 200) {
-        const filteredItems = data.filter(item => item.ID !== id);
+        const filteredItems = data.filter(item => item.id !== id);
         onChangeData(filteredItems); 
       }
     } catch (error) {
@@ -164,8 +156,8 @@ function DataTable({
                   data-state={row.getIsSelected() && "selected"}
                 >
                   <TableCell>
-                    <input id={`cb-select-${row.original.ID}`} type="checkbox" name="post[]" value={row.original.ID} />
-                    <label htmlFor={`cb-select-${row.original.ID}`}>
+                    <input id={`cb-select-${row.original.id}`} type="checkbox" name="post[]" value={row.original.id} />
+                    <label htmlFor={`cb-select-${row.original.id}`}>
                       <span className="screen-reader-text">
                       Select {row.original.post_title}				</span>
                     </label>
@@ -177,10 +169,12 @@ function DataTable({
                   </TableCell>
                   {row.getVisibleCells().map((cell, key) => (
                     <TableCell key={cell.id}>
-                      {key == 1 ? 
-                      <div dangerouslySetInnerHTML={{__html: cell.row.original.post_content.slice(0, 150)}} /> : 
-                      key == 3 ? <Badge>Badge</Badge> : 
-                      key == 4 ? <Button onClick={() => handleStatus(cell.row.original.ID)} className={clsx(buttonVariants({variant: 'primary'}))}>
+                      {
+                      key == 0 ? <img src={cell.row.original.cover} alt={cell.row.original.post_title} width={80}/> : 
+                      key == 2 ? <div dangerouslySetInnerHTML={{__html: cell.row.original.post_content.slice(0, 150)}} /> : 
+                      key == 4 ? cell.row.original.categories.map((cat, key) => <Badge key={key} variant="outline" className={clsx('mr-2 mb-2')}>{cat.name}</Badge>) : 
+                      key == 5 ? cell.row.original.tags.map((tag, key) => <Badge key={key} variant="secondary" className={clsx('mr-2 mb-2')}>{tag.name}</Badge>) : 
+                      key == 6 ? <Button onClick={() => handleStatus(cell.row.original.id)} className={clsx(buttonVariants({variant: 'primary'}))}>
                       Disponible</Button> : 
                       flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
@@ -218,68 +212,5 @@ function DataTable({
       </div>
     </form>
   )
-}
-const ButtonSynchro = ({prevData, setData}) => {
-  const [pending, setPending] = useState(false);
-
-  const lanceSynchro = (e) => {
-    e.preventDefault();
-    setPending(true);
-
-    const options = {
-      method: 'GET',
-      headers: {
-        accept: 'application/json',
-        Authorization: 'Bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI3MzQzYmRhMTViZjgwNjU2MTEyZjQzMWVkYjFiY2M3NiIsInN1YiI6IjY1YTRmM2Q3OGEwZTliMDEyZWI0NjE3NiIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.ZJc_GUl1LWfmJovPq51s3MiFuwsKAaQeGH6YXQSRjUI'
-      }
-    };
-    
-    fetch('https://api.themoviedb.org/3/movie/now_playing?language=fr-FR&page=1', options)
-      .then(response => {
-        if (!response.ok) {
-          throw new Error('La requête fetch a échoué');
-        }
-        return response.json();
-      })
-      .then(response => {
-        const apiUrl = `http://localhost/wordpress/wp-json/hqfastservice/v1/create-products`;
-        fetch(apiUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            data: response.results
-          })
-        })
-        .then(response => {
-          if (!response.ok) {
-            throw new Error('La réponse du réseau n\'était pas ok');
-          }
-          return response.json();
-        })
-        .then(data => {
-          console.log("data", data)
-          console.log("response", response)
-          setData(data.data)
-        })
-        .catch(error => {
-          console.error('Erreur lors de l\'envoi des données:', error);
-        })
-        .finally(() => {
-          setPending(false);
-        });
-      })
-      .catch(err => {
-        console.error(err);
-        setPending(false);
-      });
-  }
-
-  return (
-    <Button onClick={(e) => lanceSynchro(e)} disabled={pending}>
-      {pending ? 'Chargement...' : 'Lancer la synchronisation'}
-    </Button>
-  );
 }
 export default Synchronisation
