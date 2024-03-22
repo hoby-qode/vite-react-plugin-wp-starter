@@ -63,21 +63,40 @@ class WP_React_Settings_Rest_Route {
     }
 
     public function create_products($data) {
-        // // Vérifier si des données ont été reçues
+        
+        // Vérifier si des données ont été reçues
         if (empty($data['data'])) {
             return 'Aucune donnée à traiter.';
         }
-    
+        
+        $terms = get_terms( array(
+			'taxonomy'   => 'hq_tags',
+			'hide_empty' => false,
+		) );
         // Parcourir chaque produit et l'insérer dans le CPT
         foreach ($data['data'] as $product) {
+            $existing_post = get_page_by_title($product['title'], OBJECT, 'products');
+            
+            // Vérifier si le produit existe déjà
+            if ($existing_post) {
+                continue; // Passer au produit suivant
+            }
+            
+            
             $wordpress_post = array(
                 'post_title' => $product['title'],
                 'post_content' => $product['overview'],
                 'post_status' => 'draft',
                 'post_author' => 1,
-                'post_type' => 'products'
+                'post_type' => 'products',
+                
+                // 'tax_input'     => array(
+                //     'hq_tags' => array(13, 16) // Remplacez les IDs 13 et 16 par les IDs des termes que vous voulez ajouter
+                // )
             );
-    
+            
+            
+
             $post_id = wp_insert_post($wordpress_post);
             
             if ($post_id) {
@@ -103,25 +122,73 @@ class WP_React_Settings_Rest_Route {
                         set_post_thumbnail($post_id, $attachmentId);
                     }
                 }
-
+    
                 $vote_average = $product['vote_average'];
-
+    
                 // Multipliez par 10
                 $percentage = $vote_average * 10;
-
+    
                 // Arrondissez à l'entier le plus proche
                 $rounded_percentage = round($percentage);
-
+    
                 update_field('date_de_sortie', $product['release_date'], $post_id);
                 update_field('rating', $rounded_percentage, $post_id);
+                update_field('original_title', $product['original_title'], $post_id);
+                update_field('popularity', $product['popularity'], $post_id);
+                update_field('vote_count', $product['vote_count'], $post_id);
                 
+                $term_ids_api = $product['genre_ids'];//via api
+                
+                $term_ids = [];
+                foreach ($terms as $term) {
+                    //maka anlay av ao am wp mifanaraka am api
+                    $id_api = get_term_meta($term->term_id, 'id_api', true);
+
+                    if (in_array($id_api, $term_ids_api)) {
+                        $term_ids[] = $term->term_id;
+                    }
+                }
+                // Ajouter les termes de taxonomie au post
+                wp_set_post_terms($post_id, $term_ids, 'hq_tags');
+
+                $curl = curl_init();
+
+                curl_setopt_array($curl, array(
+                CURLOPT_URL => 'https://api.themoviedb.org/3/movie/'. $product['id'] .'/credits?language=fr-FR',
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_ENCODING => '',
+                CURLOPT_MAXREDIRS => 10,
+                CURLOPT_TIMEOUT => 0,
+                CURLOPT_FOLLOWLOCATION => true,
+                CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+                CURLOPT_CUSTOMREQUEST => 'POST',
+                CURLOPT_POSTFIELDS => array(),
+                CURLOPT_HTTPHEADER => array(
+                    'Content-Type: application/json',
+                    'Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI3MzQzYmRhMTViZjgwNjU2MTEyZjQzMWVkYjFiY2M3NiIsInN1YiI6IjY1YTRmM2Q3OGEwZTliMDEyZWI0NjE3NiIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.ZJc_GUl1LWfmJovPq51s3MiFuwsKAaQeGH6YXQSRjUI'
+                ),
+                ));
+
+                $response = curl_exec($curl);
+                $jsonData = json_decode($response, true);
+                $actors = $response['cast'];
+                $newData = [];
+                foreach ($actors as $key => $value) {
+                    $newData['picture'] = "";
+                    $newData['name'] = $value['name'];
+                    $newData['actorName'] = $value['character'];
+                }
+                return '$newData';
+                update_field('acteurs', $newData, $post_id);
+                curl_close($curl);
             } else {
                 return false;
             }
         }
-        
-        return $data;
+    
+        // return $data;
     }
+    
 
     public function get_products() {
         $args           = array(

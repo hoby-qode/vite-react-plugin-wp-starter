@@ -41,8 +41,6 @@ const ButtonSynchro = ({setData}) => {
             return response.json();
           })
           .then(data => {
-            console.log("data", data)
-            console.log("response", response)
             setData(data.data)
           })
           .catch(error => {
