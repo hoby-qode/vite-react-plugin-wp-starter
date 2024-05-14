@@ -299,26 +299,24 @@ class WP_React_Settings_Rest_Route
             'orderBy' => 'date',
         ];
         $posts = get_posts($args);
+        $commandes = [];
         foreach ($posts as $key => $post) {
-            $productIds = get_field('produits', $post->ID);
-            $args = [
-                'post_type' => 'products',
-                'post__in' => $productIds,
-            ];
-            $res = get_posts($args);
-
-            $products = [];
-            foreach ($res as $key => $item) {
-                $products[$key]['id'] = $item->ID;
-                $products[$key]['post_title'] = $item->post_title;
-                $products[$key]['categories'] = wp_get_post_terms(
-                    $item->ID,
+            $commandes[$key] = $post;
+            $products = get_field('c_products', $post->ID);
+            foreach ($products as $i => $item) {
+                $categories = wp_get_post_terms(
+                    $item['produit']->ID,
                     'category_product'
                 );
+                $price = get_field('prix', $categories[0]); 
+                $products[$i]['price'] = $price;
             }
-            $posts[$key]->products = $products;
+            $commandes[$key]->products = $products;
+
+            $commandes[$key]->prixTotal = get_field('prix_total', $post->ID);
         }
-        return rest_ensure_response($posts);
+
+        return $commandes;
     }
 
     public function change_status_commande($data)
